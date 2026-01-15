@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { apiRequest } from "@/utils/apiUtils"
+import { Navigate } from "react-router-dom"
 
 type Props = {}
 
@@ -18,7 +19,7 @@ type Role = {
 type HierarchyNode = {
   id: string
   name: string
-  parent: number | null
+  parent: string | null // Cambiado de number a string
   quantity: number
 }
 
@@ -37,7 +38,7 @@ const CompanyCreate = (props: Props) => {
   const [roles, setRoles] = useState<Role[]>([{ id: "1", name: "" }])
   const [hierarchyNodes, setHierarchyNodes] = useState<HierarchyNode[]>([])
   const [newNodeName, setNewNodeName] = useState("")
-  const [selectedParent, setSelectedParent] = useState<number | null>(null)
+  const [selectedParent, setSelectedParent] = useState<string | null>(null) // Cambiado a string
   const [newNodeQuantity, setNewNodeQuantity] = useState(1)
 
   const {
@@ -106,13 +107,28 @@ const CompanyCreate = (props: Props) => {
     }
 
     setLoading(true)
-    setErro("")
     try {
+      // Transformamos los datos antes de enviarlos
+      const jerarquiasParaEnviar = hierarchyNodes.map((h) => {
+        // Buscamos el nodo padre en la lista local usando el ID guardado en h.parent
+        const nodoPadre = hierarchyNodes.find((n) => n.id === h.parent)
+
+        return {
+          name: h.name,
+          // Si tiene padre, enviamos su NOMBRE, si no, enviamos null (o "null" según pida tu API)
+          parent: nodoPadre ? nodoPadre.name : null,
+          quantity: h.quantity
+        }
+      })
+
       await apiRequest("/hierarchy/create", "POST", {
         company: companyId,
-        jerarquias: hierarchyNodes.map((h) => ({ name: h.name, parent: h.parent, quantity: h.quantity })),
+        jerarquias: jerarquiasParaEnviar,
       })
+
       setLoading(false)
+      // Ejemplo: redirigir tras éxito
+      // alert("Empresa creada con éxito")
     } catch (error) {
       setErro((error as Error).message)
       setLoading(false)
@@ -139,28 +155,36 @@ const CompanyCreate = (props: Props) => {
       return
     }
 
-    // Generar ID secuencial
-    const newId = (hierarchyNodes.length + 1).toString();
+    // Validar que el nombre no esté duplicado (importante para que el mapa en Java no falle)
+    if (hierarchyNodes.some(n => n.name.toLowerCase() === newNodeName.trim().toLowerCase())) {
+      setErro("Ya existe un nivel con este nombre")
+      return
+    }
 
     const newNode: HierarchyNode = {
-      id: newId, // Ahora será "1", luego "2", etc.
+      id: Date.now().toString(), // ID único para el front
       name: newNodeName.trim(),
-      parent: selectedParent ? selectedParent : null,
-      quantity: newNodeQuantity !== null ? newNodeQuantity : 1 // Asegurar que sea string o null
+      parent: selectedParent ? selectedParent : null, // Aquí selectedParent guardará el NOMBRE
+      quantity: newNodeQuantity || 1
     }
 
     setHierarchyNodes([...hierarchyNodes, newNode])
     setNewNodeName("")
-    setSelectedParent(0) // Resetear a sin padre
-    setNewNodeQuantity(0)
+    setSelectedParent(null) // Resetear
+    setNewNodeQuantity(1)
+    setErro("")
   }
 
   const removeHierarchyNode = (id: string) => {
-    const getChildrenIds = (parentId: string | null): string[] => {
-      const children = hierarchyNodes.filter((n) => n.parent === parentId)
-      return children.reduce((acc, child) => [...acc, child.id, ...getChildrenIds(child.id)], [] as string[])
+    const nodeToDelete = hierarchyNodes.find(n => n.id === id);
+    if (!nodeToDelete) return;
+
+    const getChildrenIds = (parentName: string): string[] => {
+      const children = hierarchyNodes.filter((n) => n.parent === parentName)
+      return children.reduce((acc, child) => [...acc, child.id, ...getChildrenIds(child.name)], [] as string[])
     }
-    const idsToRemove = [id, ...getChildrenIds(id)]
+
+    const idsToRemove = [id, ...getChildrenIds(nodeToDelete.name)]
     setHierarchyNodes(hierarchyNodes.filter((n) => !idsToRemove.includes(n.id)))
   }
 
@@ -177,54 +201,55 @@ const CompanyCreate = (props: Props) => {
 
   const getRootNodes = () => hierarchyNodes.filter((n) => n.parent === null)
 
-  const getChildren = (parentId: string) => hierarchyNodes.filter((n) => n.parent === parentId)
+  const getChildren = (parentId: string | null) =>
+    hierarchyNodes.filter((n) => n.parent === parentId);
 
   const HierarchyTree = ({ node, level = 0 }: { node: HierarchyNode; level?: number }) => {
     const children = getChildren(node.id)
     const hasChildren = children.length > 0
 
     return (
-      <div className="relative">
-        {level > 0 && <div className="absolute -top-4 left-1/2 w-0.5 h-4" style={{ backgroundColor: colorPage }} />}
-        <div className="relative flex flex-col items-center" style={{ marginLeft: level > 0 ? 0 : 0 }}>
-          <div
-            className="px-4 py-3 rounded-lg shadow-md border-2 min-w-[120px] text-center transition-all hover:shadow-lg group relative"
-            style={{ borderColor: colorPage, backgroundColor: `${colorPage}10` }}
-          >
-            <span className="font-medium text-slate-800">{node.name}</span>
-            <button
-              onClick={() => removeHierarchyNode(node.id)}
-              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
+      <div className="flex flex-col items-center relative">
+        {/* Nodo Actual */}
+        <div
+          className="relative p-3 rounded-lg border shadow-md min-w-[140px] text-center bg-white z-10"
+          style={{ borderTop: `4px solid ${colorPage}` }}
+        >
+          <p className="text-sm font-bold text-slate-800">{node.name}</p>
+          <div className="flex items-center justify-center gap-1 mt-1">
+            <Users className="w-3 h-3 text-slate-400" />
+            <span className="text-[10px] font-medium text-slate-500">{node.quantity}</span>
           </div>
+        </div>
 
-          {hasChildren && (
-            <>
-              <div className="w-0.5 h-4" style={{ backgroundColor: colorPage }} />
-              <div className="relative flex gap-6">
+        {/* Renderizado de Hijos con conectores */}
+        {hasChildren && (
+          <div className="relative pt-6 flex justify-center gap-4">
+            {/* Línea vertical que sale del padre hacia abajo */}
+            <div
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-6 bg-slate-300"
+            />
+
+            {children.map((child, index) => (
+              <div key={child.id} className="relative pt-6">
+                {/* Línea horizontal que conecta a los hermanos */}
                 {children.length > 1 && (
                   <div
-                    className="absolute top-0 h-0.5"
+                    className="absolute top-0 h-px bg-slate-300"
                     style={{
-                      backgroundColor: colorPage,
-                      left: "50%",
-                      right: "50%",
-                      transform: "translateX(-50%)",
-                      width: `calc(100% - 60px)`,
+                      left: index === 0 ? "50%" : "0",
+                      right: index === children.length - 1 ? "50%" : "0",
                     }}
                   />
                 )}
-                {children.map((child, index) => (
-                  <div key={child.id} className="relative pt-4">
-                    <HierarchyTree node={child} level={level + 1} />
-                  </div>
-                ))}
+                {/* Línea vertical corta que entra al hijo */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-6 bg-slate-300" />
+
+                <HierarchyTree node={child} level={level + 1} />
               </div>
-            </>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     )
   }
@@ -519,12 +544,12 @@ const CompanyCreate = (props: Props) => {
                     />
                     <select
                       value={selectedParent || ""}
-                      onChange={(e) => setSelectedParent(e.target.value || null)} // Captura el ID del nodo padre
-                      className="h-11 px-3 border rounded-lg bg-white text-slate-700 min-w-[200px]"
+                      onChange={(e) => setSelectedParent(e.target.value || null)}
+                      className="..."
                     >
                       <option value="">Sin padre (nivel raíz)</option>
                       {hierarchyNodes.map((node) => (
-                        <option key={node.id} value={node.id}>
+                        <option key={node.id} value={node.id}> {/* Usamos ID como valor */}
                           {node.name}
                         </option>
                       ))}
