@@ -3,7 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminLayout } from './layouts/AdminLayout';
 import Company from './pages/Company';
-import AdminPanel from './pages/AdminPanel';
+import AdminPanel from './components/AdminPanel';
+import GestorUsers from './components/GestorUsers';
+import TaskManager from './components/TaskManager';
 
 
 // Páginas de ejemplo
@@ -19,6 +21,7 @@ const Login = () => {
     localStorage.setItem('nameCompany', 'Empresa Ejemplo');
     localStorage.setItem('hierarchy', 'Gerente');
     localStorage.setItem('colorCompany', '#3b82f6'); // Azul
+    localStorage.setItem('idCompany', '1');
     localStorage.setItem('logoCompany', '/react.svg');
     // Redirección inmediata según rol
     role === 'ADMIN' ? navigate('/company') : navigate('/mis-tareas');
@@ -42,12 +45,16 @@ export default function App() {
 
         {/* RUTAS DE ADMINISTRADOR (Solo ADMIN) */}
         <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-          <Route element={<AdminLayout
+          <Route element={
+            <AdminLayout
             company={
               { 
-                colorCompany: localStorage.getItem('colorCompany') || '#10b981',
-                 logoCompany: localStorage.getItem('logoCompany') || 'https://via.placeholder.com/150' }} />} >
-            <Route path="/admin" element={<AdminPanel />} />
+                colorCompany: localStorage.getItem('colorCompany') || '#3b82f6',
+                 logoCompany: localStorage.getItem('logoCompany') || 'https://via.placeholder.com/150' }} />
+              } >
+            <Route path="/dashboard" element={<AdminPanel />} />
+            <Route path="/usuarios" element={<GestorUsers />} />
+            <Route path="/empresa" element={<TaskManager />} />
           </Route>
           <Route path="/company" element={<Company />} />
         </Route>

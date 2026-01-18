@@ -2,8 +2,9 @@ import type React from "react"
 
 import { useState } from "react"
 import { Menu, X, LogOut, Home, Users, Building2, BarChart3, FileText, Outdent } from "lucide-react"
+import { Outlet, useNavigate } from "react-router-dom"
 
-interface CompanyProps {
+export interface CompanyProps {
   colorCompany: string
   logoCompany: string
 }
@@ -15,6 +16,7 @@ export const AdminLayout = ({
   company: CompanyProps
   children?: React.ReactNode
 }) => {
+  const navigate = useNavigate(); // Inicializas el hook
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [activeRoute, setActiveRoute] = useState("/dashboard")
 
@@ -26,7 +28,7 @@ export const AdminLayout = ({
   const navigationItems = [
     { path: "/dashboard", label: "Inicio", icon: Home },
     { path: "/usuarios", label: "Gestión Usuarios", icon: Users },
-    { path: "/empresas", label: "Empresa", icon: Building2 },
+    { path: "/empresa", label: "Empresa", icon: Building2 },
     { path: "/configuracion", label: "Supervisar", icon: BarChart3 },
     { path: "/reportes", label: "Reportes Generales", icon: FileText },
   ]
@@ -34,6 +36,7 @@ export const AdminLayout = ({
   const handleNavClick = (path: string) => {
     setActiveRoute(path)
     setIsSidebarOpen(false)
+    navigate(path)
   }
 
   return (
@@ -46,9 +49,8 @@ export const AdminLayout = ({
       {/* Sidebar */}
       <aside
         style={{ backgroundColor: company.colorCompany }}
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } flex flex-col shadow-2xl`}
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } flex flex-col shadow-2xl`}
       >
         {/* Logo Section */}
         <div className="p-6 border-b border-white/10">
@@ -85,11 +87,10 @@ export const AdminLayout = ({
               <button
                 key={item.path}
                 onClick={() => handleNavClick(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                  isActive
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${isActive
                     ? "bg-white/20 text-white shadow-lg backdrop-blur-sm"
                     : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
+                  }`}
               >
                 <Icon size={20} className="flex-shrink-0" />
                 <span className="font-medium">{item.label}</span>
@@ -134,7 +135,9 @@ export const AdminLayout = ({
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto bg-background p-4 lg:p-8">
-          <Outdent className="max-w-7xl mx-auto">{children}</Outdent>
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

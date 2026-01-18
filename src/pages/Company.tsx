@@ -9,14 +9,14 @@ type Props = {}
 const Company = (props: Props) => {   
     const navigate = useNavigate(); // Inicializas el hook
     const active = localStorage.getItem('active');
-    const colorPage = localStorage.getItem('colorPage') || '#3b82f6'; // Azul por defecto
+    const colorPage = localStorage.getItem('colorCompany') || '#3b82f6'; // Azul por defecto
     const nameCompany = localStorage.getItem('nameCompany') || 'Mi Empresa';
 
     const handleLoadCompany = () => {
         // Lógica para cargar la empresa
         alert("Cargando empresa...");
         // redirijir a otra página si es necesario
-        navigate('/admin')
+        navigate('/dashboard')
 
     }
 

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { apiRequest } from "@/utils/apiUtils"
-import { Navigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 
 type Props = {}
 
@@ -41,6 +41,8 @@ const CompanyCreate = (props: Props) => {
   const [selectedParent, setSelectedParent] = useState<string | null>(null) // Cambiado a string
   const [newNodeQuantity, setNewNodeQuantity] = useState(1)
 
+  const navigate = useNavigate();
+
   const {
     handleSubmit,
     register,
@@ -69,6 +71,7 @@ const CompanyCreate = (props: Props) => {
       setLoading(false)
       if (response?.id) {
         setCompanyId(response.id)
+        localStorage.setItem('idCompany', response.id);
       }
       setCurrentStep(2)
     } catch (error) {
@@ -127,6 +130,7 @@ const CompanyCreate = (props: Props) => {
       })
 
       setLoading(false)
+      navigate('/dashboard');
       // Ejemplo: redirigir tras éxito
       // alert("Empresa creada con éxito")
     } catch (error) {
