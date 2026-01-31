@@ -34,7 +34,7 @@ const Company = (props: Props) => {
                 >
                     <div className="w-full max-w-4xl">
                         <div className="text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-teal-600 shadow-lg mb-4">
+                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full" style={{ backgroundColor: colorPage }}>
                                 <Building2 className="w-10 h-10 text-white" />
                             </div>
                             <div className="space-y-3">
@@ -47,7 +47,8 @@ const Company = (props: Props) => {
                             </div>
                             <Button
                                 size="lg"
-                                className="mt-6 bg-gradient-to-r from-blue-500 to-teal-600 hover:from-blue-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                                className="mt-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                                style={{ backgroundColor: colorPage }}
                                 onClick={() => handleLoadCompany()}
                             >
                                 <Building2 className="mr-2 h-5 w-5" />

@@ -18,11 +18,12 @@ const Login = () => {
     localStorage.setItem('role', role);
     localStorage.setItem('active', 'true');
     localStorage.setItem('nameUser', 'Juan Pérez');
-    localStorage.setItem('nameCompany', 'Empresa Ejemplo');
+    localStorage.setItem('nameCompany', 'Fundacion Calidad de Vida');
     localStorage.setItem('hierarchy', 'Gerente');
     localStorage.setItem('colorCompany', '#3b82f6'); // Azul
     localStorage.setItem('idCompany', '1');
     localStorage.setItem('logoCompany', '/react.svg');
+    localStorage.setItem('idUser', '1');  
     // Redirección inmediata según rol
     role === 'ADMIN' ? navigate('/company') : navigate('/mis-tareas');
   };
@@ -50,11 +51,11 @@ export default function App() {
             company={
               { 
                 colorCompany: localStorage.getItem('colorCompany') || '#3b82f6',
-                 logoCompany: localStorage.getItem('logoCompany') || 'https://via.placeholder.com/150' }} />
+                 logoCompany: localStorage.getItem('logoCompany') || 'https://www.vhv.rs/dpng/d/283-2832831_logos-de-empresas-de-computadoras-png-download-logo.png' }} />
               } >
             <Route path="/dashboard" element={<AdminPanel />} />
             <Route path="/usuarios" element={<GestorUsers />} />
-            <Route path="/empresa" element={<TaskManager />} />
+            <Route path="/asignar-actividades" element={<TaskManager />} />
           </Route>
           <Route path="/company" element={<Company />} />
         </Route>

@@ -28,8 +28,8 @@ export const AdminLayout = ({
   const navigationItems = [
     { path: "/dashboard", label: "Inicio", icon: Home },
     { path: "/usuarios", label: "Gestión Usuarios", icon: Users },
-    { path: "/empresa", label: "Empresa", icon: Building2 },
-    { path: "/configuracion", label: "Supervisar", icon: BarChart3 },
+    { path: "/asignar-actividades", label: "Asignar Actividades", icon: Building2 },
+    { path: "/actividades", label: "Supervisar", icon: BarChart3 },
     { path: "/reportes", label: "Reportes Generales", icon: FileText },
   ]
 
@@ -58,7 +58,7 @@ export const AdminLayout = ({
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center overflow-hidden backdrop-blur-sm">
                 <img
-                  src={company.logoCompany || "/react.svg"}
+                  src="https://www.vhv.rs/dpng/d/283-2832831_logos-de-empresas-de-computadoras-png-download-logo.png"
                   alt="Company Logo"
                   className="w-10 h-10 object-contain"
                 />
