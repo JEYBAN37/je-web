@@ -31,7 +31,8 @@ import {
   Network,
   CalendarCheck,
   ClipboardCheck,
-  Clock
+  Clock,
+  MapPin
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -80,6 +81,9 @@ interface TaskFormValues {
   startDate?: string | null
   endDate?: string | null
   createdAt?: string | null
+  placeOrlocation?: string | null
+  startTime?: string | null
+  endTime?: string | null
 }
 
 
@@ -88,6 +92,7 @@ const TaskManager = () => {
   const [subordinados, setSubordinados] = useState<Multiselect[]>([])
   const [supervisores, setSupervisores] = useState<Multiselect[]>([])
   const [recurrente, setRecurrente] = useState<boolean>(false)
+  const [place, setPlace] = useState<boolean>(false)
   const [erro, setErro] = useState("")
   const [loading, setLoading] = useState(false)
   const [startDate, setStartDate] = useState<Date | undefined>()
@@ -99,6 +104,8 @@ const TaskManager = () => {
   const colorCompany = typeof window !== "undefined" ? localStorage.getItem("colorCompany") || "#10b981" : "#10b981"
   const [successfullySubmitted, setSuccessfullySubmitted] = useState(false)
   const [tasks, setTasks] = useState<any[]>(['1', '2', '3'])
+  const [startTime, setStartTime] = useState<string>("")
+  const [endTime, setEndTime] = useState<string>("")
 
   const {
     handleSubmit,
@@ -201,9 +208,12 @@ const TaskManager = () => {
       assignedNodes: selectedAssignees.map(item =>
         typeof item === 'object' ? Number(item.id) : Number(item)
       ),
+      startTime: startTime || null,
+      endTime: endTime || null,
       startDate: startDate ? startDate.toISOString().split('T')[0] : null,
       endDate: endDate ? endDate.toISOString().split('T')[0] : null,
       createdAt: new Date().toISOString().split('T')[0],
+      placeOrlocation: null
     }
 
     setLoading(true)
@@ -252,10 +262,10 @@ const TaskManager = () => {
   }
 
   return (
-    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="grid grid-cols-1 lg:grid-cols-2 pb-4">
-        <div className="p-4 md:p-6">
-          <Card className="border-border shadow-lg">
+    <div className="w-full flex-1 animate-in fade-in slide-in-from-bottom-4 duration-700 flex flex-col">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 items-start"> {/* items-start evita que la card se estire a la fuerza */}
+        <div className="flex-1 w-full">
+          <Card className="border-border shadow-lg h-auto"> {/* h-auto es clave aquí */}
             <CardHeader className="space-y-1">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -271,14 +281,13 @@ const TaskManager = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              {erro && (
-                <div className="mb-6 p-2 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                  <p className="text-sm text-destructive">{erro}</p>
-                </div>
-              )
-              }
+            <CardContent className="h-auto overflow-visible"> {/* Evita overflow-hidden para que no corte sombras o popovers */}              {erro && (
+              <div className="mb-6 p-2 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive">{erro}</p>
+              </div>
+            )
+            }
               {successfullySubmitted && (
                 <div className="mb-6 p-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-start gap-3">
                   <CheckSquare className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
@@ -424,6 +433,34 @@ const TaskManager = () => {
                   </div>
                 </div>
 
+                {/* Horas */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Hora inicio
+                    </Label>
+                    <Input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Hora fin
+                    </Label>
+                    <Input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+
                 {/* Aprobadores */}
                 <div className="space-y-3">
                   <Label className="text-sm font-medium flex items-center gap-2">
@@ -431,13 +468,7 @@ const TaskManager = () => {
                     Requiere aprobacion de
                   </Label>
 
-                  <MultiSelectSearch
-                    options={supervisores}
-                    selected={selectedApprovers}
-                    onChange={setSelectedApprovers}
-                    placeholder="Seleccionar usuarios..."
-                    searchPlaceholder="Buscar por nombre, rol o nodo..."
-                  />
+          
 
                   {errors.approvers && (
                     <p className="text-xs text-destructive">Debe seleccionar al menos un aprobador</p>
@@ -495,6 +526,42 @@ const TaskManager = () => {
                         <option value="W">Semanal</option>
                         <option value="M">Mensual</option>
                       </select>
+                    </div>
+                  )}
+                </div>
+
+
+                {/* Place */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="place"
+                      checked={place}
+                      onCheckedChange={(checked) => setPlace(checked === true)}
+                    />
+                    <Label
+                      htmlFor="place"
+                      className="text-sm font-medium flex items-center gap-2 cursor-pointer"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      Lugar de la Actividad
+                    </Label>
+                  </div>
+
+                  {place && (
+                    <div className="ml-7 space-y-2">
+                      <Label htmlFor="place" className="text-sm text-muted-foreground">
+                        Lugar o Ubicación
+                      </Label>
+                      <Input
+                        id="place"
+                        placeholder="Ej: Microterrio / Oficina Principal"
+                        className={cn(
+                          "h-11",
+                          errors.placeOrLocation && "border-destructive focus-visible:ring-destructive"
+                        )}
+                        {...register("placeOrLocation", { maxLength: 100 })}
+                      />
                     </div>
                   )}
                 </div>
@@ -632,7 +699,7 @@ const TaskManager = () => {
 
               {/* Aquí iría el calendario con las actividades */}
 
-              <WeeklyCalendar tasks={tasks} />
+              <WeeklyCalendar />
 
               {
                 tasks.length > 0 ? (
@@ -658,8 +725,8 @@ const TaskManager = () => {
           </Card>
         </div>
       </div>
-       
-       <FilterTableTask />
+
+
 
     </div>
   )

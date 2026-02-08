@@ -88,8 +88,8 @@ export const AdminLayout = ({
                 key={item.path}
                 onClick={() => handleNavClick(item.path)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${isActive
-                    ? "bg-white/20 text-white shadow-lg backdrop-blur-sm"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                  ? "bg-white/20 text-white shadow-lg backdrop-blur-sm"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
               >
                 <Icon size={20} className="flex-shrink-0" />
@@ -134,8 +134,8 @@ export const AdminLayout = ({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto bg-background p-4 lg:p-8">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-auto bg-background p-4 lg:p-8 flex flex-col">
+          <div className="max-w-7xl mx-auto flex-1 flex flex-col">
             <Outlet />
           </div>
         </main>

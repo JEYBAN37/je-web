@@ -20,10 +20,12 @@ const Login = () => {
     localStorage.setItem('nameUser', 'Juan Pérez');
     localStorage.setItem('nameCompany', 'Fundacion Calidad de Vida');
     localStorage.setItem('hierarchy', 'Gerente');
+    localStorage.setItem('hierarchyId', '1');
     localStorage.setItem('colorCompany', '#3b82f6'); // Azul
     localStorage.setItem('idCompany', '1');
     localStorage.setItem('logoCompany', '/react.svg');
     localStorage.setItem('idUser', '1');  
+
     // Redirección inmediata según rol
     role === 'ADMIN' ? navigate('/company') : navigate('/mis-tareas');
   };

@@ -8,19 +8,19 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { apiRequest } from "@/utils/apiUtils"
 
 export interface Task {
   id: string
   title: string
   description?: string
-  date: Date
-  startTime: string
-  endTime: string
+  createdAt: Date
+  startDate: Date
+  endDate: Date
   color?: string
 }
 
 interface WeeklyCalendarProps {
-  tasks: Task[]
   onTaskClick?: (task: Task) => void
 }
 
@@ -45,16 +45,16 @@ function isSameDay(date1: Date, date2: Date): boolean {
 }
 
 function formatDate(date: Date): string {
-  return date.toLocaleDateString("es-ES", { 
-    day: "numeric", 
-    month: "long", 
-    year: "numeric" 
+  return date.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
   })
 }
 
 function formatShortDate(date: Date): string {
-  return date.toLocaleDateString("es-ES", { 
-    day: "numeric", 
+  return date.toLocaleDateString("es-ES", {
+    day: "numeric",
     month: "short"
   })
 }
@@ -62,12 +62,12 @@ function formatShortDate(date: Date): string {
 function getDatesInRange(startDate: Date, endDate: Date): Date[] {
   const dates: Date[] = []
   const current = new Date(startDate)
-  
+
   while (current <= endDate) {
     dates.push(new Date(current))
     current.setDate(current.getDate() + 1)
   }
-  
+
   return dates
 }
 
@@ -79,9 +79,11 @@ function isDateInArray(date: Date, dateArray: Date[]): boolean {
   return dateArray.some(d => isSameDay(d, date))
 }
 
-export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
+export function WeeklyCalendar({ onTaskClick }: WeeklyCalendarProps) {
   const today = new Date()
-  
+  const [tasks, setTasks] = React.useState<Task[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const hierarchyId = localStorage.getItem('hierarchyId') || '';
   // Estado para el rango de fechas - por defecto el mes actual
   const [startDate, setStartDate] = React.useState<Date>(() => {
     const d = new Date(today.getFullYear(), today.getMonth(), 1)
@@ -91,7 +93,7 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
     const d = new Date(today.getFullYear(), today.getMonth() + 1, 0)
     return d
   })
-  
+
   // Ahora es un array de fechas seleccionadas
   const [selectedDates, setSelectedDates] = React.useState<Date[]>([])
   const [showFilter, setShowFilter] = React.useState(false)
@@ -99,7 +101,7 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
   const datesInRange = getDatesInRange(startDate, endDate)
 
   const getTasksForDay = (date: Date) => {
-    return tasks.filter(task => isSameDay(new Date(task.date), date))
+    return tasks.filter(task => isSameDay(new Date(task.startDate), date))
   }
 
   const getTaskColor = (taskId: string) => {
@@ -144,31 +146,31 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
   }
 
   // Obtener todas las tareas de los dias seleccionados
-  const selectedDatesTasks = selectedDates.flatMap(date => 
+  const selectedDatesTasks = selectedDates.flatMap(date =>
     getTasksForDay(date).map(task => ({ ...task, selectedDate: date }))
   ).sort((a, b) => {
     // Ordenar primero por fecha, luego por hora
     const dateCompare = a.selectedDate.getTime() - b.selectedDate.getTime()
     if (dateCompare !== 0) return dateCompare
-    return a.startTime.localeCompare(b.startTime)
+    return a.startDate.getTime() - b.startDate.getTime()
   })
 
   // Agrupar tareas por fecha para mostrar en el listado
   const tasksByDate = selectedDates.map(date => ({
     date,
-    tasks: getTasksForDay(date).sort((a, b) => a.startTime.localeCompare(b.startTime))
+    tasks: getTasksForDay(date).sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
   }))
 
   // Agrupar fechas por semanas para mejor visualizacion
   const weeks: Date[][] = []
   let currentWeek: Date[] = []
-  
+
   // Agregar dias vacios al inicio para alinear con el dia de la semana
   const firstDayOfWeek = datesInRange[0].getDay()
   for (let i = 0; i < firstDayOfWeek; i++) {
     currentWeek.push(new Date(0)) // Fecha invalida como placeholder
   }
-  
+
   datesInRange.forEach((date) => {
     currentWeek.push(date)
     if (currentWeek.length === 7) {
@@ -176,7 +178,7 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
       currentWeek = []
     }
   })
-  
+
   // Agregar dias vacios al final si es necesario
   if (currentWeek.length > 0) {
     while (currentWeek.length < 7) {
@@ -185,6 +187,44 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
     weeks.push(currentWeek)
   }
 
+  // Cargar tareas de la API
+  React.useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        let finalStartDate = startDate.toISOString().split('T')[0];
+        let finalEndDate = endDate.toISOString().split('T')[0];
+
+        if (!finalStartDate) {
+          const date = new Date();
+          date.setDate(date.getDate() - 15);
+          finalStartDate = date.toISOString().split('T')[0];
+          setStartDate(new Date(finalStartDate));
+        }
+
+        if (!finalEndDate) {
+          const date = new Date();
+          finalEndDate = date.toISOString().split('T')[0];
+          setEndDate(new Date(finalEndDate));
+        }
+
+        const params = new URLSearchParams();
+        params.append('startDate', finalStartDate);
+        params.append('endDate', finalEndDate);
+        params.append('hierarchyId', hierarchyId);
+        params.append('recurrence', 'true');
+        
+        const data = await apiRequest<Task[]>(`/task/all?${params.toString()}`, 'GET', null)
+        console.log('Fetching tasks with params:', JSON.stringify(data));
+        setTasks(data)
+      } catch (error) {
+        console.error('Error cargando tareas:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTasks()
+  }, [ startDate, endDate])
   return (
     <div className="space-y-4">
       {/* Selector de rango de fechas */}
@@ -197,9 +237,9 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
                 {startDate.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} - {endDate.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
               </CardTitle>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="h-7 text-xs gap-1.5 bg-transparent"
               onClick={() => setShowFilter(!showFilter)}
             >
@@ -207,7 +247,7 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
               Filtrar
             </Button>
           </div>
-          
+
           {/* Panel de filtros */}
           {showFilter && (
             <div className="mt-3 pt-3 border-t border-border grid grid-cols-2 gap-3 animate-in fade-in-0 slide-in-from-top-1 duration-200">
@@ -238,13 +278,13 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
             </div>
           )}
         </CardHeader>
-        
+
         <CardContent className="px-4 pb-4 pt-0">
           {/* Instrucciones */}
           <p className="text-xs text-muted-foreground mb-3">
             Haz clic en varios dias para ver todas sus tareas juntas
           </p>
-          
+
           {/* Encabezados de dias de la semana */}
           <div className="grid grid-cols-7 gap-1 mb-2">
             {SHORT_DAYS.map((day) => (
@@ -253,7 +293,7 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
               </div>
             ))}
           </div>
-          
+
           {/* Grid de dias */}
           <div className="space-y-1">
             {weeks.map((week, weekIndex) => (
@@ -261,16 +301,16 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
                 {week.map((date, dayIndex) => {
                   // Verificar si es un placeholder (fecha invalida)
                   const isPlaceholder = date.getTime() === 0
-                  
+
                   if (isPlaceholder) {
                     return <div key={dayIndex} className="aspect-square" />
                   }
-                  
+
                   const dayTasks = getTasksForDay(date)
                   const isToday = isSameDay(date, today)
                   const isSelected = isDateInArray(date, selectedDates)
                   const hasTasks = dayTasks.length > 0
-                  
+
                   return (
                     <button
                       key={dayIndex}
@@ -291,17 +331,17 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
                       )}>
                         {date.getDate()}
                       </span>
-                      
+
                       {/* Indicador de tareas */}
                       {hasTasks && (
                         <div className="absolute bottom-1 flex gap-0.5">
                           {dayTasks.slice(0, 3).map((_, idx) => (
-                            <div 
-                              key={idx} 
+                            <div
+                              key={idx}
                               className={cn(
                                 "w-1 h-1 rounded-full",
                                 isSelected ? "bg-primary-foreground/70" : "bg-primary"
-                              )} 
+                              )}
                             />
                           ))}
                         </div>
@@ -312,7 +352,7 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
               </div>
             ))}
           </div>
-          
+
           {/* Leyenda y acciones */}
           <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
@@ -321,9 +361,9 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
                   <Badge variant="secondary" className="text-xs">
                     {selectedDates.length} {selectedDates.length === 1 ? "dia" : "dias"}
                   </Badge>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-6 text-xs px-2"
                     onClick={clearSelection}
                   >
@@ -336,9 +376,9 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="h-6 text-xs px-2"
                 onClick={selectAll}
               >
@@ -373,7 +413,7 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
               )}
             </div>
           </CardHeader>
-          
+
           <CardContent className="px-4 pb-4 pt-0">
             {selectedDatesTasks.length > 0 ? (
               <div className="space-y-4">
@@ -388,7 +428,7 @@ export function WeeklyCalendar({ tasks, onTaskClick }: WeeklyCalendarProps) {
                         </span>
                         <div className="h-px flex-1 bg-border" />
                       </div>
-                      
+
                       {/* Tareas del dia */}
                       {dayTasks.map((task) => (
                         <button
